@@ -1,0 +1,4 @@
+networkx==3.0
+openai==0.26.5
+requests==2.28.2
+uvloop==0.17.0
