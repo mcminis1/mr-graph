@@ -3,14 +3,19 @@ from abc import ABC
 from pydantic import BaseModel, Extra, Field
 from inspect import signature, iscoroutinefunction
 from dataclasses import make_dataclass
-import copy
 
 
-class NodeBase(BaseModel, ABC, extra=Extra.allow):
+class NodeBase(ABC):
     name: str
     inputs: typing.Optional[typing.Callable]
     func: typing.Callable
     outputs: typing.Optional[typing.Callable]
+
+    def __init__(self, name, inputs, func, outputs):
+        self.name = name
+        self.inputs = inputs
+        self.func = func
+        self.outputs = outputs
 
     def __repr__(self) -> str:
         return (
@@ -27,9 +32,6 @@ class SyncNode(NodeBase):
 
     def __call__(self, *args: typing.Any, **kwds: typing.Any):
         return self.func(*args, **kwds)
-
-    # def copy(self) -> 'SyncNode':
-    #     return copy.deepcopy(self)
 
 
 class AsyncNode(NodeBase):
@@ -100,8 +102,6 @@ def parse_default(parm: str) -> typing.Optional[str]:
 
 
 class NodeDataClass(BaseModel):
-    __node_name: str = None
-
     class Config:
         arbitrary_types_allowed = True
         extra = Extra.allow

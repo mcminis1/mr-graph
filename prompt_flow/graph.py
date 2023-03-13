@@ -2,26 +2,27 @@ import asyncio
 import typing
 import logging
 from uuid import uuid4 as uuid
-from pydantic import BaseModel, Extra, Field
+from pydantic import Field
 from prompt_flow.node import build_node, NODE_TYPES, NodeDataClass
 from dataclasses import make_dataclass, fields, asdict
 from inspect import iscoroutinefunction
 from functools import partial
 
 
-class GraphIO(BaseModel, extra=Extra.allow):
+class GraphIO:
     name: str
     inputs: dict[str, tuple[str, str]]  # keys to pull input
     node: NODE_TYPES
     output: NodeDataClass
 
     def __init__(self, name, inputs, node, output):
-        super().__init__(name=name, inputs=inputs, node=node, output=output)
-        # copy doesn't work right here
+        self.name = name
+        self.inputs = inputs
         self.node = node
+        self.output = output
 
 
-class Graph(BaseModel, extra=Extra.allow):
+class Graph:
     nodes: dict[str, NODE_TYPES] = dict()
     flow: dict[str, GraphIO] = dict()
     inputs: dict[str, NodeDataClass] = dict()
@@ -29,6 +30,10 @@ class Graph(BaseModel, extra=Extra.allow):
 
     def __init__(self, nodes: typing.List[typing.Callable] = []):
         super().__init__()
+        self.nodes = dict()
+        self.flow = dict()
+        self.inputs = dict()
+        self.outputs = None
         self.add_nodes(nodes)
 
     def add_node(self, func: typing.Callable):
@@ -97,7 +102,7 @@ class Graph(BaseModel, extra=Extra.allow):
             # implicit graph definition
             self.__plan_implicit_graph_flow()
 
-        return_values = dict()
+        intermediate_results = dict()
         if len(args) == len(self.inputs):
             for arg, (key, val) in zip(args, self.inputs.items()):
                 if isinstance(arg, NodeDataClass):
@@ -107,13 +112,13 @@ class Graph(BaseModel, extra=Extra.allow):
                     if arg_fields == input_fields:
                         for input_field in input_fields:
                             setattr(val, input_field, getattr(arg, input_field))
-                        return_values[key] = val
+                        intermediate_results[key] = val
                 else:
                     # if the arg is not a dataclass, we use the value to set the values in order.
                     # each input must be a single value
                     input_fields = [x.name for x in fields(val)]
                     setattr(val, input_fields[0], arg)
-                    return_values[key] = val
+                    intermediate_results[key] = val
         else:
             # number of args does not match. we use kwargs now.
             for g_input_name, g_input_dataclass in self.inputs.items():
@@ -126,11 +131,11 @@ class Graph(BaseModel, extra=Extra.allow):
                         g_input_dc_field_name[0].name,
                         kwds[g_input_dc_field_name[0].name],
                     )
-                return_values[g_input_name] = g_input_dataclass
+                intermediate_results[g_input_name] = g_input_dataclass
 
         for node_name, node in self.flow.items():
             # these are the outputs for the flow nodes
-            return_values[node_name] = node.output
+            intermediate_results[node_name] = node.output
 
         ran_1 = True
         completed_tasks = []
@@ -144,12 +149,15 @@ class Graph(BaseModel, extra=Extra.allow):
                     input_node_id,
                     input_node_kwd,
                 ) in step_graphio.inputs.items():
-                    if asdict(return_values[input_node_id])[input_node_kwd] is None:
+                    if (
+                        asdict(intermediate_results[input_node_id])[input_node_kwd]
+                        is None
+                    ):
                         ready_to_run = False
                     else:
-                        step_kwds[input_kwd] = asdict(return_values[input_node_id])[
-                            input_node_kwd
-                        ]
+                        step_kwds[input_kwd] = asdict(
+                            intermediate_results[input_node_id]
+                        )[input_node_kwd]
                 if ready_to_run and step_graphio.name not in completed_tasks:
                     ran_1 = True
                     if iscoroutinefunction(step_graphio.node.func):
@@ -158,17 +166,17 @@ class Graph(BaseModel, extra=Extra.allow):
                         )
                     else:
                         step_evaluation = step_graphio.node(**step_kwds)
-                        ks = list(asdict(return_values[step_name]).keys())
+                        ks = list(asdict(intermediate_results[step_name]).keys())
                         if len(ks) > 1:
                             for i, k in enumerate(ks):
                                 setattr(
-                                    return_values[step_graphio.name],
+                                    intermediate_results[step_graphio.name],
                                     str(k),
                                     step_evaluation[i],
                                 )
                         else:
                             setattr(
-                                return_values[step_graphio.name],
+                                intermediate_results[step_graphio.name],
                                 str(ks[0]),
                                 step_evaluation,
                             )
@@ -178,12 +186,14 @@ class Graph(BaseModel, extra=Extra.allow):
                 await asyncio.gather(*coros)
                 for step_name, step_evaluation in running_coroutines.items():
                     step_value = step_evaluation.result()
-                    ks = list(asdict(return_values[step_name]).keys())
+                    ks = list(asdict(intermediate_results[step_name]).keys())
                     if len(ks) > 1:
                         for i, k in enumerate(ks):
-                            setattr(return_values[step_name], str(k), step_value[i])
+                            setattr(
+                                intermediate_results[step_name], str(k), step_value[i]
+                            )
                     else:
-                        setattr(return_values[step_name], str(ks[0]), step_value)
+                        setattr(intermediate_results[step_name], str(ks[0]), step_value)
 
         if isinstance(self.outputs, list):
             combined_dataclass = self.outputs[0]
