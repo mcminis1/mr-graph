@@ -1,5 +1,5 @@
 import pytest
-from prompt_flow.graph import Graph
+from graph_flow.graph import Graph
 from functions import sub_1, add_1, reverse_order, mult_2
 
 
