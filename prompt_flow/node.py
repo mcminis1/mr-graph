@@ -1,19 +1,16 @@
 import typing
-from abc import ABC, abstractmethod
+from abc import ABC
 from pydantic import BaseModel, Extra, Field
 from inspect import signature, iscoroutinefunction
-from dataclasses import make_dataclass, field
-
+from dataclasses import make_dataclass
+import copy
 
 class NodeBase(BaseModel, ABC, extra=Extra.allow):
     name: str
     inputs: typing.Optional[typing.Callable]
     func: typing.Callable
     outputs: typing.Optional[typing.Callable]
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
+    
     def __repr__(self) -> str:
         return (
             f"('name': {self.name}, 'inputs': {self.inputs}, 'outputs': {self.outputs})"
@@ -24,16 +21,24 @@ class NodeBase(BaseModel, ABC, extra=Extra.allow):
 
 
 class SyncNode(NodeBase):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
     def __call__(self, *args: typing.Any, **kwds: typing.Any):
         return self.func(*args, **kwds)
+    # def copy(self) -> 'SyncNode':
+    #     return copy.deepcopy(self)
 
 
 class AsyncNode(NodeBase):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
     async def __call__(self, *args: typing.Any, **kwds: typing.Any):
         return await self.func(*args, **kwds)
 
 
-NODE_TYPES = AsyncNode | SyncNode
+NODE_TYPES = typing.Union[AsyncNode, SyncNode]
 
 
 def parse__doc__(func: typing.Callable) -> list[tuple[str, str]]:
@@ -97,10 +102,26 @@ class NodeDataClass(BaseModel):
         arbitrary_types_allowed = True
         extra = Extra.allow
 
-    def __iadd__(self, other):
-        return [self, other]
+    def __add__(self, other):
+        if isinstance(other, NodeDataClass):
+            for attr, val in other.__dict__.items():
+                if attr in ['_Graph__node_name','__node_name']:
+                    continue
+                elif attr in self.__dict__ and getattr(self, attr) == None:
+                    setattr(self, attr, val)
+                elif attr not in self.__dict__:
+                    setattr(self, attr, val)
+                else:
+                    raise Exception(f"Attempting to overwrite {attr} when adding NodeDataClass")
+            return self
+        else:
+            raise Exception("Adding a not NodeDataClass to a NodeDataClass")
 
-    # def __add__(self, other):
+    def __iadd__(self, other):
+        if isinstance(other, NodeDataClass):
+            return [self, other]
+        else:
+            raise Exception("Adding a not NodeDataClass to a NodeDataClass")
 
 
 def build_node(func: typing.Callable) -> NODE_TYPES:

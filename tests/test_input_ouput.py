@@ -1,7 +1,6 @@
 import pytest
-import typing
-from prompt_flow.graph import Graph, SuperList
-from functions import sub_1, add_1, reverse_order, mult_2, div_mul_2
+from prompt_flow.graph import Graph
+from functions import sub_1, add_1, reverse_order, mult_2
 
 
 @pytest.mark.asyncio

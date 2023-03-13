@@ -196,6 +196,12 @@ class Graph(BaseModel, extra=Extra.allow):
                             setattr(return_values[step_name], str(k), step_value[i])
                     else:
                         setattr(return_values[step_name], str(ks[0]), step_value)
+
+        if isinstance(self.outputs, list):
+            combined_dataclass =  self.outputs[0]
+            for output in self.outputs[1:]:
+                combined_dataclass = combined_dataclass + output
+            return combined_dataclass
         return self.outputs
 
     def __node_wrapper(self, node: NODE_TYPES, *args, **kwds) -> NodeDataClass:
@@ -211,14 +217,19 @@ class Graph(BaseModel, extra=Extra.allow):
                 for arg_node_field in arg_node_fields:
                     input_key = (arg_node_name, arg_node_field.name)
                     input_mapping[node_input_fields[indx]] = input_key
-            else:
-                print()
+            # else:
+                # # eventually we need to allow splitting NodeDataClass and 
+                # # using individual fields as inputs in later graphs
+                
 
         for kwd, dc in kwds.items():
             if kwd in node_input_fields:
                 if isinstance(dc, NodeDataClass):
                     input_mapping[kwd] = (dc.__node_name, fields(dc)[0])
-        
+                else:
+                    # some constant passed
+                    i = self.input(name=kwd, default_value=dc)
+                    input_mapping[kwd] = (i.__node_name, kwd)
         if len(node_input_fields) != len(input_mapping.keys()):
             missing_fields = [
                 x for x in node_input_fields if x not in list(input_mapping.keys())
@@ -234,12 +245,10 @@ class Graph(BaseModel, extra=Extra.allow):
 
         o = node.outputs()
         o.__node_name = name
-        # logging.debug(f"creating graph node: {name}, node: {type(node)}")
         self.flow[name] = GraphIO(name=name, inputs=input_mapping, node=node, output=o)
-
         return o
 
-    def input(self, names: list[str] = [], name: str = None) -> NodeDataClass:
+    def input(self, names: list[str] = [], name: str = None, default_value: typing.Any = None) -> NodeDataClass:
         new_node_name = str(uuid())
         input_dataclass = None
         if name is None:
@@ -263,7 +272,7 @@ class Graph(BaseModel, extra=Extra.allow):
                     (
                         name,
                         "typing.Optional[typing.Any]",
-                        Field(default=None, init=False),
+                        Field(default=default_value, init=False),
                     )
                 ],
                 bases=(NodeDataClass,),

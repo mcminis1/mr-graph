@@ -16,8 +16,5 @@ async def test_fan_out():
     assert len(g.outputs) == 2
 
     v = await g(n=1)
-    print(v)
-    assert len(v) == 2
-    # TODO(jeremy): need a better way to manage multiple outputs
-    assert v[0].q == 4
-    assert v[1].p == 1
+    assert v.q == 4
+    assert v.p == 1
