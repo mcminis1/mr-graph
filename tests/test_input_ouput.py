@@ -15,6 +15,7 @@ async def test_multiple_outputs():
     g.outputs += g.sub_1(o_1)  # p
     assert len(g.outputs) == 2
 
+
 @pytest.mark.asyncio
 async def test_input_inference():
     # explicit input ordering based on func name + args in case of name conflicts

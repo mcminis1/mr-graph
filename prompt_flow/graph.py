@@ -32,16 +32,17 @@ class GraphIO(BaseModel, extra=Extra.allow):
     output: NodeDataClass
 
     def __init__(self, name, inputs, node, output):
-        super().__init__(name = name, inputs = inputs, node = node, output = output)
+        super().__init__(name=name, inputs=inputs, node=node, output=output)
         # copy doesn't work right here
         self.node = node
+
 
 class Graph(BaseModel, extra=Extra.allow):
     nodes: dict[str, NODE_TYPES] = dict()
     flow: dict[str, GraphIO] = dict()
     inputs: dict[str, NodeDataClass] = dict()
     outputs: NodeDataClass = None
-    
+
     def __init__(self, nodes: typing.List[typing.Callable] = []):
         super().__init__()
         self.add_nodes(nodes)
@@ -71,17 +72,21 @@ class Graph(BaseModel, extra=Extra.allow):
                     node_0_inputs = sorted([x.name for x in fields(node_0.inputs)])
                     node_1_outputs = sorted([x.name for x in fields(node_1.outputs)])
                     if node_name_0 != node_name_1:
-                        if  node_0_inputs == node_1_outputs:
+                        if node_0_inputs == node_1_outputs:
                             # node_1 is the input to node_0
-                            graph_edges.append((node_name_0, node_name_1, node_1_outputs))
+                            graph_edges.append(
+                                (node_name_0, node_name_1, node_1_outputs)
+                            )
                             nodes_with_inputs.add(node_name_0)
                             if node_name_1 in leaf_nodes:
                                 leaf_nodes.remove(node_name_1)
         # find global inputs.
-        root_node_names = [x for x in list(self.nodes.keys()) if x not in nodes_with_inputs]
+        root_node_names = [
+            x for x in list(self.nodes.keys()) if x not in nodes_with_inputs
+        ]
         outputs = {}
         for root_node_name in root_node_names:
-            # we get the outputs for the root nodes and then 
+            # we get the outputs for the root nodes and then
             # iterate over the rest until all the edges have inputs.
             self_root_node = getattr(self, root_node_name)
             outputs[root_node_name] = self_root_node()
@@ -98,13 +103,12 @@ class Graph(BaseModel, extra=Extra.allow):
                 else:
                     remaining_edges.append(graph_edge)
             graph_edges = remaining_edges
-        
+
         self.outputs = [outputs[x] for x in leaf_nodes]
         if len(self.outputs) == 1:
             self.outputs = self.outputs[0]
-                            
-    async def __call__(self, *args, **kwds) -> dict[str, NodeDataClass]:
 
+    async def __call__(self, *args, **kwds) -> dict[str, NodeDataClass]:
         if len(self.flow.keys()) == 0:
             # implicit graph definition
             self.__plan_implicit_graph_flow()
@@ -165,17 +169,25 @@ class Graph(BaseModel, extra=Extra.allow):
                 if ready_to_run and step_graphio.name not in completed_tasks:
                     ran_1 = True
                     if iscoroutinefunction(step_graphio.node.func):
-                        running_coroutines[step_graphio.name] = asyncio.create_task(step_graphio.node(**step_kwds))
+                        running_coroutines[step_graphio.name] = asyncio.create_task(
+                            step_graphio.node(**step_kwds)
+                        )
                     else:
                         step_evaluation = step_graphio.node(**step_kwds)
                         ks = list(asdict(return_values[step_name]).keys())
                         if len(ks) > 1:
                             for i, k in enumerate(ks):
                                 setattr(
-                                    return_values[step_graphio.name], str(k), step_evaluation[i]
+                                    return_values[step_graphio.name],
+                                    str(k),
+                                    step_evaluation[i],
                                 )
                         else:
-                            setattr(return_values[step_graphio.name], str(ks[0]), step_evaluation)
+                            setattr(
+                                return_values[step_graphio.name],
+                                str(ks[0]),
+                                step_evaluation,
+                            )
                     completed_tasks.append(step_graphio.name)
             coros = list(running_coroutines.values())
             if len(coros) > 0:
@@ -185,9 +197,7 @@ class Graph(BaseModel, extra=Extra.allow):
                     ks = list(asdict(return_values[step_name]).keys())
                     if len(ks) > 1:
                         for i, k in enumerate(ks):
-                            setattr(
-                                return_values[step_name], str(k), step_value[i]
-                            )
+                            setattr(return_values[step_name], str(k), step_value[i])
                     else:
                         setattr(return_values[step_name], str(ks[0]), step_value)
         print(return_values)
@@ -217,16 +227,16 @@ class Graph(BaseModel, extra=Extra.allow):
                     input_mapping[kwd] = (dc.__node_name, fields(dc)[0])
 
         if len(node_input_fields) != len(input_mapping.keys()):
-            missing_fields = [x for x in node_input_fields if x not in list(input_mapping.keys())]
+            missing_fields = [
+                x for x in node_input_fields if x not in list(input_mapping.keys())
+            ]
             i = self.input(names=missing_fields)
             for field in missing_fields:
                 input_mapping[field] = (i.__node_name, field)
 
-
             # raise Exception(
             #     f"input not supplied for {node.name}",
             # )
-
 
         o = node.outputs()
         o.__node_name = name

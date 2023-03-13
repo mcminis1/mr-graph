@@ -15,10 +15,13 @@ class NodeBase(BaseModel, ABC, extra=Extra.allow):
         super().__init__(*args, **kwargs)
 
     def __repr__(self) -> str:
-        return f"('name': {self.name}, 'inputs': {self.inputs}, 'outputs': {self.outputs})"
+        return (
+            f"('name': {self.name}, 'inputs': {self.inputs}, 'outputs': {self.outputs})"
+        )
 
     def __hash__(self):
         return self.func.__hash__()
+
 
 class SyncNode(NodeBase):
     def __call__(self, *args: typing.Any, **kwds: typing.Any):
@@ -93,6 +96,7 @@ class NodeDataClass(BaseModel):
 
     # def __add__(self, other):
 
+
 def build_node(func: typing.Callable) -> NODE_TYPES:
     name = func.__name__
     sig = signature(func)
@@ -111,7 +115,7 @@ def build_node(func: typing.Callable) -> NODE_TYPES:
     output_dataclass = make_dataclass(
         f"{name}_outputs", outputs, bases=(NodeDataClass,), init=False
     )
-    
+
     if iscoroutinefunction(func):
         return AsyncNode(
             func=func, name=name, inputs=input_dataclass, outputs=output_dataclass

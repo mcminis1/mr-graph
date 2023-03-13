@@ -1,14 +1,14 @@
 import typing
 
-Point = typing.NamedTuple("Point", [('x', int), ('y', int)])
+Point = typing.NamedTuple("Point", [("x", int), ("y", int)])
 
 
 def return_one():
     """
     return 1
-    
+
     return one with no inputs
-    
+
     Returns
     -------
     m : float
@@ -36,7 +36,7 @@ async def add_1(n: float):
     return n + 1
 
 
-async def add_to_tuple1(o: tuple[int,int]):
+async def add_to_tuple1(o: tuple[int, int]):
     """
     add 1 to numbers in a tuple
 
@@ -54,6 +54,7 @@ async def add_to_tuple1(o: tuple[int,int]):
     """
     return o[0] + 1, o[1] + 1
 
+
 async def add_to_namedtuple1(o: Point):
     """
     add 1 to numbers in a Point
@@ -70,7 +71,7 @@ async def add_to_namedtuple1(o: Point):
     p : Point
         input Point with 1 added
     """
-    p = Point(x=o.x+1, y=o.y+1)
+    p = Point(x=o.x + 1, y=o.y + 1)
     return p
 
 
@@ -93,7 +94,6 @@ async def sub_1(m: int):
     return m - 1
 
 
-
 async def sub_dict_1(j: dict[str, int]):
     """
     subtract 1 from a number
@@ -111,10 +111,9 @@ async def sub_dict_1(j: dict[str, int]):
         dict to - 1
     """
     p = dict()
-    for k,v in j.items():
-        p[k] = v-1
+    for k, v in j.items():
+        p[k] = v - 1
     return p
-
 
 
 # we can mix async and sync calls in a graph
