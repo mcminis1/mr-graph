@@ -1,13 +1,9 @@
 import asyncio
-import sys
 import typing
-import uvloop
-import time
 import logging
-from copy import deepcopy
 from uuid import uuid4 as uuid
 from pydantic import BaseModel, Extra, Field
-from prompt_flow.node import build_node, NODE_TYPES, NodeDataClass, parse_input
+from prompt_flow.node import build_node, NODE_TYPES, NodeDataClass, parse_annotation
 from dataclasses import make_dataclass, fields, asdict
 from inspect import iscoroutinefunction
 from functools import partial
@@ -200,8 +196,6 @@ class Graph(BaseModel, extra=Extra.allow):
                             setattr(return_values[step_name], str(k), step_value[i])
                     else:
                         setattr(return_values[step_name], str(ks[0]), step_value)
-        print(return_values)
-        print(self.outputs)
         return self.outputs
 
     def __node_wrapper(self, node: NODE_TYPES, *args, **kwds) -> NodeDataClass:
@@ -210,7 +204,6 @@ class Graph(BaseModel, extra=Extra.allow):
         node_input_fields = [x.name for x in fields(node_input_dataclass)]
         input_mapping = dict()
 
-        print(name)
         for indx, arg in enumerate(args):
             if isinstance(arg, NodeDataClass):
                 arg_node_name = arg.__node_name
@@ -225,18 +218,19 @@ class Graph(BaseModel, extra=Extra.allow):
             if kwd in node_input_fields:
                 if isinstance(dc, NodeDataClass):
                     input_mapping[kwd] = (dc.__node_name, fields(dc)[0])
-
+        
         if len(node_input_fields) != len(input_mapping.keys()):
             missing_fields = [
                 x for x in node_input_fields if x not in list(input_mapping.keys())
             ]
-            i = self.input(names=missing_fields)
-            for field in missing_fields:
-                input_mapping[field] = (i.__node_name, field)
-
-            # raise Exception(
-            #     f"input not supplied for {node.name}",
-            # )
+            defaults_exist = True
+            for missing_field in missing_fields:
+                if getattr(node_input_dataclass, missing_field) is None:
+                    defaults_exist = False
+            if not defaults_exist:
+                i = self.input(names=missing_fields)
+                for field in missing_fields:
+                    input_mapping[field] = (i.__node_name, field)
 
         o = node.outputs()
         o.__node_name = name

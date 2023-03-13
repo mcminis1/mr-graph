@@ -55,7 +55,28 @@ async def add_to_tuple1(o: tuple[int, int]):
     return o[0] + 1, o[1] + 1
 
 
-async def add_to_namedtuple1(o: Point):
+async def split_point(pnt:Point, field:str = 'x'):
+    """
+    pull a field off a point
+
+    either x or y. pull a field off the point objext
+
+    Parameters
+    ----------
+    pnt : Point
+        the point
+    field : str
+        the attribute to pull. either x or y
+        
+    Returns
+    -------
+    p_field : int
+        the output p.field
+    """
+    return getattr(pnt, field)
+
+
+async def add_to_point(o: Point):
     """
     add 1 to numbers in a Point
 

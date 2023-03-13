@@ -73,7 +73,7 @@ type_map["typing.NamedTuple"] = "namedtuple"
 type_map["NamedTuple"] = "namedtuple"
 
 
-def parse_input(class_str: str) -> str:
+def parse_annotation(class_str: str) -> str:
     class_name = class_str
     if class_str.startswith("<class '"):
         class_name = class_str[8:-2]
@@ -83,6 +83,12 @@ def parse_input(class_str: str) -> str:
         return type_map[class_name]
     return class_name
 
+def parse_default(parm: str) -> typing.Optional[str]:
+    parts = parm.split('=')
+    if len(parts) == 1:
+        return None
+    else:
+        return parts[1].strip("' ")
 
 class NodeDataClass(BaseModel):
     __node_name: str = None
@@ -103,8 +109,8 @@ def build_node(func: typing.Callable) -> NODE_TYPES:
     inputs = [
         (
             k,
-            f"typing.Optional[{parse_input(str(v.annotation))}]",
-            Field(default=None, init=False),
+            f"typing.Optional[{parse_annotation(str(v.annotation))}]",
+            Field(default=parse_default(str(v))),
         )
         for k, v in sig.parameters.items()
     ]
