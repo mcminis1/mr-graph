@@ -5,12 +5,13 @@ from inspect import signature, iscoroutinefunction
 from dataclasses import make_dataclass
 import copy
 
+
 class NodeBase(BaseModel, ABC, extra=Extra.allow):
     name: str
     inputs: typing.Optional[typing.Callable]
     func: typing.Callable
     outputs: typing.Optional[typing.Callable]
-    
+
     def __repr__(self) -> str:
         return (
             f"('name': {self.name}, 'inputs': {self.inputs}, 'outputs': {self.outputs})"
@@ -21,19 +22,20 @@ class NodeBase(BaseModel, ABC, extra=Extra.allow):
 
 
 class SyncNode(NodeBase):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
     def __call__(self, *args: typing.Any, **kwds: typing.Any):
         return self.func(*args, **kwds)
+
     # def copy(self) -> 'SyncNode':
     #     return copy.deepcopy(self)
 
 
 class AsyncNode(NodeBase):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
     async def __call__(self, *args: typing.Any, **kwds: typing.Any):
         return await self.func(*args, **kwds)
 
@@ -88,12 +90,14 @@ def parse_annotation(class_str: str) -> str:
         return type_map[class_name]
     return class_name
 
+
 def parse_default(parm: str) -> typing.Optional[str]:
-    parts = parm.split('=')
+    parts = parm.split("=")
     if len(parts) == 1:
         return None
     else:
         return parts[1].strip("' ")
+
 
 class NodeDataClass(BaseModel):
     __node_name: str = None
@@ -105,14 +109,16 @@ class NodeDataClass(BaseModel):
     def __add__(self, other):
         if isinstance(other, NodeDataClass):
             for attr, val in other.__dict__.items():
-                if attr in ['_Graph__node_name','__node_name']:
+                if attr in ["_Graph__node_name", "__node_name"]:
                     continue
                 elif attr in self.__dict__ and getattr(self, attr) == None:
                     setattr(self, attr, val)
                 elif attr not in self.__dict__:
                     setattr(self, attr, val)
                 else:
-                    raise Exception(f"Attempting to overwrite {attr} when adding NodeDataClass")
+                    raise Exception(
+                        f"Attempting to overwrite {attr} when adding NodeDataClass"
+                    )
             return self
         else:
             raise Exception("Adding a not NodeDataClass to a NodeDataClass")

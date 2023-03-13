@@ -3,22 +3,10 @@ import typing
 import logging
 from uuid import uuid4 as uuid
 from pydantic import BaseModel, Extra, Field
-from prompt_flow.node import build_node, NODE_TYPES, NodeDataClass, parse_annotation
+from prompt_flow.node import build_node, NODE_TYPES, NodeDataClass
 from dataclasses import make_dataclass, fields, asdict
 from inspect import iscoroutinefunction
 from functools import partial
-
-
-class SuperList(list):
-    def __iadd__(self, other):
-        if type(other) == list or type(other) == SuperList:
-            return super().__iadd__(other)
-        return super().__iadd__(SuperList(other))
-
-    def __add__(self, other):
-        if type(other) == list or type(other) == SuperList:
-            return super().__add__(other)
-        return super().__add__(SuperList(other))
 
 
 class GraphIO(BaseModel, extra=Extra.allow):
@@ -198,7 +186,7 @@ class Graph(BaseModel, extra=Extra.allow):
                         setattr(return_values[step_name], str(ks[0]), step_value)
 
         if isinstance(self.outputs, list):
-            combined_dataclass =  self.outputs[0]
+            combined_dataclass = self.outputs[0]
             for output in self.outputs[1:]:
                 combined_dataclass = combined_dataclass + output
             return combined_dataclass
@@ -218,9 +206,8 @@ class Graph(BaseModel, extra=Extra.allow):
                     input_key = (arg_node_name, arg_node_field.name)
                     input_mapping[node_input_fields[indx]] = input_key
             # else:
-                # # eventually we need to allow splitting NodeDataClass and 
-                # # using individual fields as inputs in later graphs
-                
+            # # eventually we need to allow splitting NodeDataClass and
+            # # using individual fields as inputs in later graphs
 
         for kwd, dc in kwds.items():
             if kwd in node_input_fields:
@@ -248,7 +235,9 @@ class Graph(BaseModel, extra=Extra.allow):
         self.flow[name] = GraphIO(name=name, inputs=input_mapping, node=node, output=o)
         return o
 
-    def input(self, names: list[str] = [], name: str = None, default_value: typing.Any = None) -> NodeDataClass:
+    def input(
+        self, names: list[str] = [], name: str = None, default_value: typing.Any = None
+    ) -> NodeDataClass:
         new_node_name = str(uuid())
         input_dataclass = None
         if name is None:

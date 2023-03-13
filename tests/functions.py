@@ -55,7 +55,7 @@ async def add_to_tuple1(o: tuple[int, int]):
     return o[0] + 1, o[1] + 1
 
 
-async def split_point(pnt:Point, field:str = 'x'):
+async def split_point(pnt: Point, field: str = "x"):
     """
     pull a field off a point
 
@@ -67,7 +67,7 @@ async def split_point(pnt:Point, field:str = 'x'):
         the point
     field : str
         the attribute to pull. either x or y
-        
+
     Returns
     -------
     p_field : int
