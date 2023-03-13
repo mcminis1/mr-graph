@@ -43,5 +43,5 @@ async def test_implicit_linear_named():
     # this will wire it up as sub_1 -> add_1 -> mult_2 using the input/output names
     # no ambiguity in the input, pass as arg
     # we could pass in explicitly to the graph
-    v = await g(5)
+    v = await g(n=5)
     assert v.q == 10
