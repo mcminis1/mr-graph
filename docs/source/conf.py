@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.abspath("."))
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = 'graph-flow'
+project = 'mr-graph'
 copyright = '2023, Jeremy McMinis'
 author = 'Jeremy McMinis'
 release = '0.1.0'

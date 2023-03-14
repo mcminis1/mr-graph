@@ -1,8 +1,8 @@
-# Graph-Flow
+# Mr. Graph
 
-Welcome to Graph Flow!
+Welcome to Mr. Graph!
 
-Graph-Flow is a python library designed to make composing graphs of sync and async functions easy!
+Mr. Graph is a python library designed to make composing graphs of sync and async functions easy!
 
 ## Features
 
@@ -17,7 +17,7 @@ Graph-Flow is a python library designed to make composing graphs of sync and asy
 Building graphs can be as easy as:
 
 ```python
-from graph_flow import Graph
+from mr_graph import Graph
 
 def return_one():
     """

@@ -7,12 +7,12 @@
 
 
 
-Graph-Flow
+Mr. Graph
 ==========
 
-Welcome to Graph Flow!
+Welcome to Mr. Graph!
 
-Graph-Flow is a python library designed to make composing graphs of sync and async functions easy!
+Mr. Graph is a python library designed to make composing graphs of sync and async functions easy!
 
 .. toctree::
    :maxdepth: 2
@@ -24,7 +24,7 @@ Graph-Flow is a python library designed to make composing graphs of sync and asy
 
 Features
 --------
-Graph flow is new and under active development. Current Features include.
+Mr. Graph is new and under active development. Current Features include.
 
 * Use with either async or sync functions
 * Uses regular documentation formats to name return values.
@@ -33,14 +33,14 @@ Graph flow is new and under active development. Current Features include.
 
 If you're interested in contributing, please create a ticket on `github`_ and suggest a feature!
 
-.. _github: https://github.com/mcminis1/graph-flow
+.. _github: https://github.com/mcminis1/mr-graph
 
 Example Usage
 -------------
 
 Building graphs can be as easy as::
 
-   from graph_flow import Graph
+   from mr_graph import Graph
 
    def return_one():
       """

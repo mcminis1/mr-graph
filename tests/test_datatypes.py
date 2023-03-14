@@ -1,5 +1,5 @@
 import pytest
-from graph_flow.graph import Graph
+from mr_graph.graph import Graph
 from functions import add_to_point, Point, split_point, add_1
 
 

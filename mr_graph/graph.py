@@ -3,7 +3,7 @@ import typing
 import logging
 from uuid import uuid4 as uuid
 from pydantic import Field
-from graph_flow.node import build_node, NODE_TYPES, NodeDataClass
+from mr_graph.node import build_node, NODE_TYPES, NodeDataClass
 from dataclasses import make_dataclass, fields, asdict
 from inspect import iscoroutinefunction
 from functools import partial
