@@ -15,11 +15,11 @@ Welcome to Mr. Graph!
 Mr. Graph is a python library designed to make composing graphs of sync and async functions easy!
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Getting Started
 
    ./getting_started/installation
-   ./getting_started/starter_examples
+   ./getting_started/concepts
 
 
 Features

@@ -7,20 +7,7 @@ from mr_graph.node import build_node, NODE_TYPES, NodeDataClass
 from dataclasses import make_dataclass, fields, asdict
 from inspect import iscoroutinefunction
 from functools import partial
-
-
-class GraphIO:
-    name: str
-    inputs: dict[str, tuple[str, str]]  # keys to pull input
-    node: NODE_TYPES
-    output: NodeDataClass
-
-    def __init__(self, name, inputs, node, output):
-        self.name = name
-        self.inputs = inputs
-        self.node = node
-        self.output = output
-
+from mr_graph.graphio import GraphIO
 
 class Graph:
     nodes: dict[str, NODE_TYPES] = dict()
