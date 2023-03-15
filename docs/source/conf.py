@@ -23,7 +23,7 @@ release = '0.1.0'
 extensions = ['sphinx.ext.napoleon', 'sphinx.ext.autodoc']
 
 templates_path = ['_templates']
-exclude_patterns = []
+exclude_patterns = ['push_pypi']
 
 
 # -- Options for HTML output -------------------------------------------------

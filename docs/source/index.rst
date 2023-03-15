@@ -20,6 +20,7 @@ Mr. Graph is a python library designed to make composing graphs of sync and asyn
 
    ./getting_started/installation
    ./getting_started/concepts
+   ./getting_started/tutorial
 
 
 Features
