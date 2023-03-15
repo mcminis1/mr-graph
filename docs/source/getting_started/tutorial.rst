@@ -188,3 +188,5 @@ This will return a dataclass with two attributes: `p` and `q`.::
     assert v.p == 1
 
 When returning multiple values they are combined into a single dataclass object and returned. If there are conflicting names on the dataclasses then it will raise an error.
+
+When working with these outputs (NodeDataClass) you cna combine them using `+` and concatenate them into a list using `+=`
