@@ -1,7 +1,5 @@
-mr\_graph
-==========
-
-API documentation
+mr-graph
+========
 
 .. toctree::
    :maxdepth: 4
