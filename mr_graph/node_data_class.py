@@ -1,12 +1,13 @@
 from pydantic import BaseModel, Extra, Field
 import typing
 
+
 class NodeDataClass(BaseModel):
     class Config:
         arbitrary_types_allowed = True
         extra = Extra.allow
 
-    def __add__(self, other) -> 'NodeDataClass':
+    def __add__(self, other) -> "NodeDataClass":
         if isinstance(other, NodeDataClass):
             for attr, val in other.__dict__.items():
                 if attr in ["_Graph__node_name", "__node_name"]:
@@ -23,7 +24,7 @@ class NodeDataClass(BaseModel):
         else:
             raise Exception("Adding a not NodeDataClass to a NodeDataClass")
 
-    def __iadd__(self, other) -> list['NodeDataClass']:
+    def __iadd__(self, other) -> list["NodeDataClass"]:
         if isinstance(other, NodeDataClass):
             return [self, other]
         else:
@@ -43,6 +44,7 @@ type_map["typing.Deque"] = "deque"
 type_map["typing.Tuple"] = "tuple"
 type_map["typing.NamedTuple"] = "namedtuple"
 type_map["NamedTuple"] = "namedtuple"
+
 
 def parse_doc(func: typing.Callable) -> list[typing.Optional[tuple[str, str]]]:
     returns = list()
@@ -64,6 +66,7 @@ def parse_doc(func: typing.Callable) -> list[typing.Optional[tuple[str, str]]]:
                     )
                 )
     return returns
+
 
 def parse_annotation(class_str: str) -> str:
     class_name = class_str

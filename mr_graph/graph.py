@@ -9,6 +9,7 @@ from inspect import iscoroutinefunction
 from functools import partial
 from mr_graph.graphio import GraphIO
 
+
 class Graph:
     nodes: dict[str, NODE_TYPES] = dict()
     flow: dict[str, GraphIO] = dict()

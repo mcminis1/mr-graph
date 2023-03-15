@@ -3,7 +3,13 @@ from abc import ABC
 from pydantic import Field
 from inspect import signature, iscoroutinefunction
 from dataclasses import make_dataclass
-from mr_graph.node_data_class import NodeDataClass, parse_annotation, parse_default, parse_doc
+from mr_graph.node_data_class import (
+    NodeDataClass,
+    parse_annotation,
+    parse_default,
+    parse_doc,
+)
+
 
 class NodeBase(ABC):
     """The NodeBase is the abstract class which is inherited to define the nodes of the execution graph.
@@ -13,7 +19,8 @@ class NodeBase(ABC):
 
     Returns:
         _type_: _description_
-    """    
+    """
+
     name: str
     inputs: typing.Optional[typing.Callable]
     func: typing.Callable
@@ -46,7 +53,9 @@ class AsyncNode(NodeBase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    async def __call__(self, *args: typing.Any, **kwds: typing.Any) -> typing.Awaitable[NodeDataClass]:
+    async def __call__(
+        self, *args: typing.Any, **kwds: typing.Any
+    ) -> typing.Awaitable[NodeDataClass]:
         return await self.func(*args, **kwds)
 
 
