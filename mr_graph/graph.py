@@ -11,12 +11,29 @@ from mr_graph.graphio import GraphIO
 
 
 class Graph:
+    """Execution graph class
+
+    Attributes:
+        nodes (dict[str, NODE_TYPES]): Graph nodes.
+        flow (dict[str, GraphIO]): Inputs, nodes, and outputs for all of the nodes defined in the graph.
+        inputs (dict[str, NodeDataClass]): The inputs required by the graph.
+        outputs (NodeDataClass): The outputs from all defined outputs in the graph.
+
+    Returns:
+        NodeDataClass: outputs from the functions used in the graph.
+    """
+
     nodes: dict[str, NODE_TYPES] = dict()
     flow: dict[str, GraphIO] = dict()
     inputs: dict[str, NodeDataClass] = dict()
     outputs: NodeDataClass = None
 
     def __init__(self, nodes: typing.List[typing.Callable] = []):
+        """Graphs can be initialized by passing nodes, or defined later.
+
+        Args:
+            nodes (typing.List[typing.Callable], optional): Functions which are to be converted into graph nodes. Defaults to [].
+        """
         super().__init__()
         self.nodes = dict()
         self.flow = dict()
@@ -25,18 +42,30 @@ class Graph:
         self.add_nodes(nodes)
 
     def add_node(self, func: typing.Callable):
+        """generates a node from a function
+
+        Args:
+            func (typing.Callable): builds the node
+        """
         node = build_node(func)
         self.nodes[node.name] = node
 
+        # THe graph adds an attribute that tracks the use of the function, its input, and its ouput
         gio = partial(self.__node_wrapper, node)
         setattr(self, node.name, gio)
 
     def add_nodes(self, funcs: typing.List[NODE_TYPES]):
+        """adds a list of functions as nodes
+
+        Args:
+            funcs (typing.List[NODE_TYPES]): iterate over functions and adds each.
+        """
         if funcs is not None:
             for func in funcs:
                 self.add_node(func)
 
     def __plan_implicit_graph_flow(self):
+        """Use the function input and output names to generate the graph topology."""
         graph_edges = []
         nodes_with_inputs = set()
         leaf_nodes = set(self.nodes.keys())
@@ -86,6 +115,11 @@ class Graph:
             self.outputs = self.outputs[0]
 
     async def __call__(self, *args, **kwds) -> dict[str, NodeDataClass]:
+        """Execute the graph. If the graph has not been configured, use inputs/outputs to plan the graph.
+
+        Returns:
+            dict[str, NodeDataClass]: The output from the graph.
+        """
         if len(self.flow.keys()) == 0:
             # implicit graph definition
             self.__plan_implicit_graph_flow()
@@ -128,6 +162,10 @@ class Graph:
         ran_1 = True
         completed_tasks = []
         while ran_1:
+            # We iterate over all of the nodes and run any that are ready to be ran.
+            # If we find that no more nodes can be executed, we quit.
+            # todo: add WARNING if some nodes are not executed.
+            # todo: add limits in case of loops
             ran_1 = False
             running_coroutines = {}
             for step_name, step_graphio in self.flow.items():
@@ -191,6 +229,14 @@ class Graph:
         return self.outputs
 
     def __node_wrapper(self, node: NODE_TYPES, *args, **kwds) -> NodeDataClass:
+        """Wraps the node entity to enable tracking inputs and outputs.
+
+        Args:
+            node (NODE_TYPES): The node to be wrapped.
+
+        Returns:
+            NodeDataClass: Output from node.
+        """
         name = str(node.name) + "-" + str(uuid())
         node_input_dataclass = node.inputs()
         node_input_fields = [x.name for x in fields(node_input_dataclass)]
@@ -236,6 +282,16 @@ class Graph:
     def input(
         self, names: list[str] = [], name: str = None, default_value: typing.Any = None
     ) -> NodeDataClass:
+        """Generate a new dataclass input to the graph.
+
+        Args:
+            names (list[str], optional): attrs for the dataclass. Defaults to [].
+            name (str, optional): attr (in case there is only one attr). Defaults to None.
+            default_value (typing.Any, optional): Default value for the attr when functions have defaults. Defaults to None.
+
+        Returns:
+            NodeDataClass: Dataclass for the input.
+        """
         new_node_name = str(uuid())
         input_dataclass = None
         if name is None:

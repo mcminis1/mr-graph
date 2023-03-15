@@ -3,11 +3,37 @@ import typing
 
 
 class NodeDataClass(BaseModel):
+    """The baseclass for dataclasses generated during graph execution.
+
+    Args:
+        BaseModel: Pydantic basemodel
+
+    Raises:
+        Exception: Raised when adding two NodeDataClass with the same attr name.
+        Exception: Raised when adding a NodeDataClass to a non-NodeDataClass.
+        Exception: Raised when iadd-ing a NodeDataClass to a non-NodeDataClass.
+
+    Returns:
+        NodeDataClass: returns self. The result of + or += methods.
+    """
+
     class Config:
         arbitrary_types_allowed = True
         extra = Extra.allow
 
     def __add__(self, other) -> "NodeDataClass":
+        """adding two NodeDataClass together.
+
+        Args:
+            other (NodeDataClass): other to add to self
+
+        Raises:
+            Exception: Raised when adding two NodeDataClass with the same attr name
+            Exception: Raised when adding a NodeDataClass to a non-NodeDataClass
+
+        Returns:
+            NodeDataClass: All attrs are added to self and returned as the result of +.
+        """
         if isinstance(other, NodeDataClass):
             for attr, val in other.__dict__.items():
                 if attr in ["_Graph__node_name", "__node_name"]:
@@ -25,6 +51,15 @@ class NodeDataClass(BaseModel):
             raise Exception("Adding a not NodeDataClass to a NodeDataClass")
 
     def __iadd__(self, other) -> list["NodeDataClass"]:
+        """Result of += operation with another NodeDataClass
+        todo: make more intuitive.
+
+        Raises:
+            Exception: Raised when iadd-ing a NodeDataClass to a non-NodeDataClass
+
+        Returns:
+            list: Each NodeDataClass is appended to a list and returned.
+        """
         if isinstance(other, NodeDataClass):
             return [self, other]
         else:
@@ -44,9 +79,38 @@ type_map["typing.Deque"] = "deque"
 type_map["typing.Tuple"] = "tuple"
 type_map["typing.NamedTuple"] = "namedtuple"
 type_map["NamedTuple"] = "namedtuple"
+"""dict: module level map for typing strings to annotation strings
+"""
+
+
+def parse_annotation(class_str: str) -> str:
+    """parse the annotation string and return a type definition.
+
+    Args:
+        class_str (str): Generated using str(type( x )).
+
+    Returns:
+        str: Annotation for dataclass
+    """
+    class_name = class_str
+    if class_str.startswith("<class '"):
+        class_name = class_str[8:-2]
+    elif class_str.startswith("<function "):
+        class_name = class_str.split(" ")[1]
+    if class_name in type_map:
+        return type_map[class_name]
+    return class_name
 
 
 def parse_doc(func: typing.Callable) -> list[typing.Optional[tuple[str, str]]]:
+    """Parses the doctrings for functions (__doc__) to get the name and type of returned values.
+
+    Args:
+        func (typing.Callable): function to get return values for.
+
+    Returns:
+        list[typing.Optional[tuple[str, str]]]: list of string tuples. Tuples contain the name and type of the return values used to create new dataclasses.
+    """
     returns = list()
     docs = func.__doc__.split("\n")
     in_returns = False
@@ -68,18 +132,15 @@ def parse_doc(func: typing.Callable) -> list[typing.Optional[tuple[str, str]]]:
     return returns
 
 
-def parse_annotation(class_str: str) -> str:
-    class_name = class_str
-    if class_str.startswith("<class '"):
-        class_name = class_str[8:-2]
-    elif class_str.startswith("<function "):
-        class_name = class_str.split(" ")[1]
-    if class_name in type_map:
-        return type_map[class_name]
-    return class_name
-
-
 def parse_default(parm: str) -> typing.Optional[str]:
+    """Determine the default value for a function parameter.
+
+    Args:
+        parm (str): parameter string
+
+    Returns:
+        typing.Optional[str]: Parameter's default value.
+    """
     parts = parm.split("=")
     if len(parts) == 1:
         return None

@@ -1,13 +1,16 @@
 # Mr. Graph
 
+[![Documentation Status](https://readthedocs.org/projects/mr-graph/badge/?version=latest)](https://mr-graph.readthedocs.io/en/latest/?badge=latest)
+
 Welcome to Mr. Graph!
 
-Mr. Graph is a python library designed to make composing graphs of sync and async functions easy!
+Mr. Graph is a python library designed to make composing graphs of sync and async functions easy! Use google style docstrings to automagically create dataclasses and chain together function calls into graphs.
 
 ## Features
 
 - Use with either async or sync functions
-- Uses regular documentation formats to name return values.
+- Uses google style doc strings to name return values.
+- Creates dataclasses for each function's output.
 - Can infer pipelines from input and output signatures
 - All directed acyclic graph layouts supported. linear, fan-in, fan-out.
 
@@ -69,4 +72,4 @@ async def build_implicit_linear_graph():
     return await g()
 ```
 
-More information to be found soon on read the docs!
+More information can be found on read the docs!

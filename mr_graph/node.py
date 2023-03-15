@@ -14,11 +14,14 @@ from mr_graph.node_data_class import (
 class NodeBase(ABC):
     """The NodeBase is the abstract class which is inherited to define the nodes of the execution graph.
 
-    Args:
-        ABC (_type_): _description_
+    Attributes:
+        name (str): Name for the node. Usually derived from the function it wraps.
+        inputs (typing.Callable, optional): a function to create a dataclass which will be used as input for the function.
+        func (typing.Callable): The function to be called for this node in the graph.
+        outputs (typing.Callable, optional): a function to create a dataclass which will be used to create an output for the function.
 
-    Returns:
-        _type_: _description_
+    Args:
+        ABC: Abstract base class.
     """
 
     name: str
@@ -42,6 +45,12 @@ class NodeBase(ABC):
 
 
 class SyncNode(NodeBase):
+    """For blocking functions.
+
+    Args:
+        NodeBase: Inherited class
+    """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -50,6 +59,12 @@ class SyncNode(NodeBase):
 
 
 class AsyncNode(NodeBase):
+    """For non-blocking (async) functions.
+
+    Args:
+        NodeBase: Inherited class
+    """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -60,9 +75,19 @@ class AsyncNode(NodeBase):
 
 
 NODE_TYPES = typing.Union[AsyncNode, SyncNode]
+"""Typing.Union for all valid node types
+"""
 
 
 def build_node(func: typing.Callable) -> NODE_TYPES:
+    """Generate a node. Can be ASync or blocking depending on the method.
+
+    Args:
+        func (typing.Callable): The function used in the node.
+
+    Returns:
+        NODE_TYPES: Any valid node type. Determined by the function that's being wrapped.
+    """
     name = func.__name__
     sig = signature(func)
     inputs = [
