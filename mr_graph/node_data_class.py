@@ -23,6 +23,7 @@ class NodeDataClass(BaseModel):
 
     def __add__(self, other) -> "NodeDataClass":
         """adding two NodeDataClass together.
+        todo: make more intuitive.
 
         Args:
             other (NodeDataClass): other to add to self
@@ -50,7 +51,7 @@ class NodeDataClass(BaseModel):
         else:
             raise Exception("Adding a not NodeDataClass to a NodeDataClass")
 
-    def __iadd__(self, other) -> list["NodeDataClass"]:
+    def __iadd__(self, other):
         """Result of += operation with another NodeDataClass
         todo: make more intuitive.
 
@@ -61,7 +62,18 @@ class NodeDataClass(BaseModel):
             list: Each NodeDataClass is appended to a list and returned.
         """
         if isinstance(other, NodeDataClass):
-            return [self, other]
+            for attr, val in other.__dict__.items():
+                if attr in ["_Graph__node_name", "__node_name"]:
+                    continue
+                elif attr in self.__dict__ and getattr(self, attr) == None:
+                    setattr(self, attr, val)
+                elif attr not in self.__dict__:
+                    setattr(self, attr, val)
+                else:
+                    raise Exception(
+                        f"Attempting to overwrite {attr} when adding NodeDataClass"
+                    )
+            return self
         else:
             raise Exception("Adding a not NodeDataClass to a NodeDataClass")
 

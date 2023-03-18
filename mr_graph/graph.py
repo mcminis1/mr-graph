@@ -175,11 +175,13 @@ class Graph:
                     input_node_id,
                     input_node_kwd,
                 ) in step_graphio.inputs.items():
-                    if (
+                    if input_node_id is not None and (
                         asdict(intermediate_results[input_node_id])[input_node_kwd]
                         is None
                     ):
                         ready_to_run = False
+                    elif input_node_id is None:
+                        step_kwds[input_kwd] = input_node_kwd
                     else:
                         step_kwds[input_kwd] = asdict(
                             intermediate_results[input_node_id]
@@ -237,47 +239,14 @@ class Graph:
         Returns:
             NodeDataClass: Output from node.
         """
-        name = str(node.name) + "-" + str(uuid())
-        node_input_dataclass = node.inputs()
-        node_input_fields = [x.name for x in fields(node_input_dataclass)]
-        input_mapping = dict()
+        gio = GraphIO(node, args, kwds)
+        if len(gio.missing_fields) > 0:
+            for field in gio.missing_fields:
+                i = self.input(name=field)
+                gio.add_input(field=field, input=i)
 
-        for indx, arg in enumerate(args):
-            if isinstance(arg, NodeDataClass):
-                arg_node_name = arg.__node_name
-                arg_node_fields = fields(arg)
-                for arg_node_field in arg_node_fields:
-                    input_key = (arg_node_name, arg_node_field.name)
-                    input_mapping[node_input_fields[indx]] = input_key
-            # else:
-            # # eventually we need to allow splitting NodeDataClass and
-            # # using individual fields as inputs in later graphs
-
-        for kwd, dc in kwds.items():
-            if kwd in node_input_fields:
-                if isinstance(dc, NodeDataClass):
-                    input_mapping[kwd] = (dc.__node_name, fields(dc)[0])
-                else:
-                    # some constant passed
-                    i = self.input(name=kwd, default_value=dc)
-                    input_mapping[kwd] = (i.__node_name, kwd)
-        if len(node_input_fields) != len(input_mapping.keys()):
-            missing_fields = [
-                x for x in node_input_fields if x not in list(input_mapping.keys())
-            ]
-            defaults_exist = True
-            for missing_field in missing_fields:
-                if getattr(node_input_dataclass, missing_field) is None:
-                    defaults_exist = False
-            if not defaults_exist:
-                i = self.input(names=missing_fields)
-                for field in missing_fields:
-                    input_mapping[field] = (i.__node_name, field)
-
-        o = node.outputs()
-        o.__node_name = name
-        self.flow[name] = GraphIO(name=name, inputs=input_mapping, node=node, output=o)
-        return o
+        self.flow[gio.name] = gio
+        return gio.output
 
     def input(
         self, names: list[str] = [], name: str = None, default_value: typing.Any = None
@@ -323,5 +292,5 @@ class Graph:
             )
         i = input_dataclass()
         i.__node_name = new_node_name
-        self.inputs[new_node_name] = input_dataclass()
+        self.inputs[new_node_name] = i
         return i
