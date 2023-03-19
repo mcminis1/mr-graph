@@ -41,14 +41,17 @@ class GraphIO:
                 for arg_node_field in arg_node_fields:
                     input_key = (arg_node_name, arg_node_field.name)
                     self.inputs[node_input_fields[indx]] = input_key
-            elif isinstance(arg, tuple):
+            elif isinstance(arg, tuple) and arg[0] == 'mr_graph_node':
                 (_, key, val) = arg
                 self.inputs[node_input_fields[indx]] = (key, val)
 
         for kwd, dc in kwds.items():
             if kwd in node_input_fields:
-                if isinstance(dc, NodeDataClass):
+                if isinstance(dc, NodeDataTracker):
                     self.inputs[kwd] = (getattr(dc, '__node_name'), kwd)
+                elif isinstance(dc, tuple) and dc[0] == 'mr_graph_node':
+                    (_, key, val) = dc
+                    self.inputs[node_input_fields[indx]] = (key, val)
                 else:
                     # some constant passed
                     self.inputs[kwd] = (None, dc)
