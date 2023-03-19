@@ -18,6 +18,5 @@ async def test_fan_in():
 
     v = await g(m=5, n=6)
 
-    print(v)
     assert v.s == 4
     assert v.t == 7

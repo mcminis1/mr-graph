@@ -4,6 +4,7 @@ import logging
 from uuid import uuid4 as uuid
 from pydantic import Field
 from mr_graph.node import build_node, NODE_TYPES, NodeDataClass
+from mr_graph.node_data_tracker import NodeDataTracker
 from dataclasses import make_dataclass, fields, asdict
 from inspect import iscoroutinefunction
 from functools import partial
@@ -127,14 +128,17 @@ class Graph:
         intermediate_results = dict()
         if len(args) == len(self.inputs):
             for arg, (key, val) in zip(args, self.inputs.items()):
-                if isinstance(arg, NodeDataClass):
+                if isinstance(arg, NodeDataTracker):
                     # if the arg is a dataclass, then we use it to set the input dataclass
-                    arg_fields = sorted([x.name for x in fields(arg)])
+                    arg_fields = sorted(arg.fields)
                     input_fields = sorted([x.name for x in fields(val)])
                     if arg_fields == input_fields:
                         for input_field in input_fields:
-                            setattr(val, input_field, getattr(arg, input_field))
+                            setattr(val, input_field, getattr(arg.data_class, input_field))
                         intermediate_results[key] = val
+                elif isinstance(arg, tuple) and arg[0] == 'mr_graph_node':
+                    (_, key, val) = arg
+                    intermediate_results[key] = val
                 else:
                     # if the arg is not a dataclass, we use the value to set the values in order.
                     # each input must be a single value
@@ -222,35 +226,33 @@ class Graph:
                             )
                     else:
                         setattr(intermediate_results[step_name], str(ks[0]), step_value)
+        
+        for node, field in self.outputs.field_map.items():
+            setattr(self.outputs.data_class, field, getattr(intermediate_results[node], field))
+        return self.outputs.data_class
 
-        if isinstance(self.outputs, list):
-            combined_dataclass = self.outputs[0]
-            for output in self.outputs[1:]:
-                combined_dataclass = combined_dataclass + output
-            return combined_dataclass
-        return self.outputs
-
-    def __node_wrapper(self, node: NODE_TYPES, *args, **kwds) -> NodeDataClass:
+    def __node_wrapper(self, node: NODE_TYPES, *args, **kwds) -> NodeDataTracker:
         """Wraps the node entity to enable tracking inputs and outputs.
 
         Args:
             node (NODE_TYPES): The node to be wrapped.
 
         Returns:
-            NodeDataClass: Output from node.
+            NodeDataTracker: Output from node.
         """
         gio = GraphIO(node, args, kwds)
         if len(gio.missing_fields) > 0:
             for field in gio.missing_fields:
                 i = self.input(name=field)
                 gio.add_input(field=field, input=i)
+                logging.warning(f"Adding inputs node:({gio.name}) missing:{field}")
 
         self.flow[gio.name] = gio
-        return gio.output
+        return NodeDataTracker(gio.output)
 
     def input(
         self, names: list[str] = [], name: str = None, default_value: typing.Any = None
-    ) -> NodeDataClass:
+    ) -> NodeDataTracker:
         """Generate a new dataclass input to the graph.
 
         Args:
@@ -259,13 +261,13 @@ class Graph:
             default_value (typing.Any, optional): Default value for the attr when functions have defaults. Defaults to None.
 
         Returns:
-            NodeDataClass: Dataclass for the input.
+            NodeDataTracker: Dataclass for the input.
         """
-        new_node_name = str(uuid())
+        new_node_name = f"graph_input_{str(uuid())}" 
         input_dataclass = None
         if name is None:
             input_dataclass = make_dataclass(
-                f"graph_input_{new_node_name}",
+                new_node_name,
                 [
                     (
                         name,
@@ -279,7 +281,7 @@ class Graph:
             )
         else:
             input_dataclass = make_dataclass(
-                f"graph_input_{new_node_name}",
+                new_node_name,
                 [
                     (
                         name,
@@ -291,6 +293,6 @@ class Graph:
                 init=False,
             )
         i = input_dataclass()
-        i.__node_name = new_node_name
+        setattr(i, '__node_name', new_node_name)
         self.inputs[new_node_name] = i
-        return i
+        return NodeDataTracker(i)

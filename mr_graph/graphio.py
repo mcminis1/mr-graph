@@ -2,6 +2,7 @@ from mr_graph.node import NODE_TYPES, NodeDataClass
 from uuid import uuid4 as uuid
 from dataclasses import fields, asdict
 import logging
+from mr_graph.node_data_tracker import NodeDataTracker
 
 class GraphIO:
     """Input and output tracker for a node in the graph.
@@ -33,20 +34,21 @@ class GraphIO:
         node_input_fields = [x.name for x in fields(node_input_dataclass)]
 
         for indx, arg in enumerate(args):
-            if isinstance(arg, NodeDataClass):
+            if isinstance(arg, NodeDataTracker):
                 # we assume a mapping from args order to function input order
-                node_name_field = [x for x in list(arg.dict().keys()) if x.endswith('node_name')][0]
-               
-                arg_node_name = getattr(arg, node_name_field)
-                arg_node_fields = fields(arg)
+                arg_node_name = getattr(arg.data_class, '__node_name')
+                arg_node_fields = fields(arg.data_class)
                 for arg_node_field in arg_node_fields:
                     input_key = (arg_node_name, arg_node_field.name)
                     self.inputs[node_input_fields[indx]] = input_key
+            elif isinstance(arg, tuple):
+                (_, key, val) = arg
+                self.inputs[node_input_fields[indx]] = (key, val)
 
         for kwd, dc in kwds.items():
             if kwd in node_input_fields:
                 if isinstance(dc, NodeDataClass):
-                    self.inputs[kwd] = (dc.__node_name, kwd)
+                    self.inputs[kwd] = (getattr(dc, '__node_name'), kwd)
                 else:
                     # some constant passed
                     self.inputs[kwd] = (None, dc)
@@ -58,8 +60,9 @@ class GraphIO:
             for candidate_field in candidate_fields:
                 if getattr(node_input_dataclass, candidate_field) is None:
                     self.missing_fields.append(candidate_field)
+
         if len(self.missing_fields) > 0:
             logging.warning(f"unmapped inputs node:({node.name}) missing:{self.missing_fields}")
 
     def add_input(self, field, input):
-        self.inputs[field] = (input._Graph__node_name, field)
+        self.inputs[field] = (getattr(input, '__node_name'), field)
