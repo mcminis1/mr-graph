@@ -12,6 +12,7 @@ async def test_explicit_linear():
     o_2 = g.sub_1(o_1)
     g.outputs = g.mult_2(o_2)
     v = await g()
+    print(v)
     assert v.q == 0
 
 
@@ -22,6 +23,7 @@ async def test_implicit_linear():
     # this will wire it up as sub_1 -> add_1 -> mult_2 using the input/output names
     # no ambiguity in the input, pass as arg
     v = await g()
+    print(v)
     assert v.q == 0
 
 

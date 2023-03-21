@@ -1,4 +1,5 @@
 import typing
+from statistics import mean
 
 Point = typing.NamedTuple("Point", [("x", int), ("y", int)])
 
@@ -222,3 +223,20 @@ def reverse_order(s: float, t: float):
         equal to a
     """
     return t, s
+
+
+async def average_list(list_of_ints: list[int]):
+    """
+    return average of a list
+
+    Parameters
+    ----------
+    list_of_ints : list[float]
+        list of values
+
+    Returns
+    -------
+    avg : float
+        average of the list
+    """
+    return mean(list_of_ints)

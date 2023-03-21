@@ -3,8 +3,10 @@ import typing
 import logging
 from uuid import uuid4 as uuid
 from pydantic import Field
-from mr_graph.node import build_node, NODE_TYPES, NodeDataClass
+from mr_graph.node import build_node, NODE_TYPES
+from mr_graph.node_data_class import NodeDataClass
 from mr_graph.node_data_tracker import NodeDataTracker
+from mr_graph.node_data_aggregator import NodeDataAggregator
 from dataclasses import make_dataclass, fields, asdict
 from inspect import iscoroutinefunction
 from functools import partial
@@ -134,9 +136,11 @@ class Graph:
                     input_fields = sorted([x.name for x in fields(val)])
                     if arg_fields == input_fields:
                         for input_field in input_fields:
-                            setattr(val, input_field, getattr(arg.data_class, input_field))
+                            setattr(
+                                val, input_field, getattr(arg.data_class, input_field)
+                            )
                         intermediate_results[key] = val
-                elif isinstance(arg, tuple) and arg[0] == 'mr_graph_node':
+                elif isinstance(arg, tuple) and arg[0] == "mr_graph_node":
                     (_, key, val) = arg
                     intermediate_results[key] = val
                 else:
@@ -173,25 +177,10 @@ class Graph:
             ran_1 = False
             running_coroutines = {}
             for step_name, step_graphio in self.flow.items():
-                ready_to_run = True
-                step_kwds = dict()
-                for input_kwd, (
-                    input_node_id,
-                    input_node_kwd,
-                ) in step_graphio.inputs.items():
-                    if input_node_id is not None and (
-                        asdict(intermediate_results[input_node_id])[input_node_kwd]
-                        is None
-                    ):
-                        ready_to_run = False
-                    elif input_node_id is None:
-                        step_kwds[input_kwd] = input_node_kwd
-                    else:
-                        step_kwds[input_kwd] = asdict(
-                            intermediate_results[input_node_id]
-                        )[input_node_kwd]
-                if ready_to_run and step_graphio.name not in completed_tasks:
+                step_kwds = self._check_if_ready_to_run(intermediate_results, step_graphio.inputs)
+                if step_kwds is not None and step_graphio.name not in completed_tasks:
                     ran_1 = True
+                    print(f"{step_graphio.name}: {step_kwds}")
                     if iscoroutinefunction(step_graphio.node.func):
                         running_coroutines[step_graphio.name] = asyncio.create_task(
                             step_graphio.node(**step_kwds)
@@ -212,7 +201,7 @@ class Graph:
                                 str(ks[0]),
                                 step_evaluation,
                             )
-                    completed_tasks.append(step_graphio.name)
+                        completed_tasks.append(step_name)
             coros = list(running_coroutines.values())
             if len(coros) > 0:
                 await asyncio.gather(*coros)
@@ -226,9 +215,14 @@ class Graph:
                             )
                     else:
                         setattr(intermediate_results[step_name], str(ks[0]), step_value)
-        
+                    completed_tasks.append(step_name)
+
         for node, field in self.outputs.field_map.items():
-            setattr(self.outputs.data_class, field, getattr(intermediate_results[node], field))
+            setattr(
+                self.outputs.data_class,
+                field,
+                getattr(intermediate_results[node], field),
+            )
         return self.outputs.data_class
 
     def __node_wrapper(self, node: NODE_TYPES, *args, **kwds) -> NodeDataTracker:
@@ -251,7 +245,10 @@ class Graph:
         return NodeDataTracker(gio.output)
 
     def input(
-        self, names: list[str] = [], name: str = None, default_value: typing.Any = None
+        self,
+        name: str = None,
+        d_type: str = "typing.Any",
+        default_value: typing.Any = None,
     ) -> NodeDataTracker:
         """Generate a new dataclass input to the graph.
 
@@ -263,36 +260,51 @@ class Graph:
         Returns:
             NodeDataTracker: Dataclass for the input.
         """
-        new_node_name = f"graph_input_{str(uuid())}" 
-        input_dataclass = None
-        if name is None:
-            input_dataclass = make_dataclass(
-                new_node_name,
-                [
-                    (
-                        name,
-                        "typing.Optional[typing.Any]",
-                        Field(default=None, init=False),
-                    )
-                    for name in names
-                ],
-                bases=(NodeDataClass,),
-                init=False,
-            )
-        else:
-            input_dataclass = make_dataclass(
-                new_node_name,
-                [
-                    (
-                        name,
-                        "typing.Optional[typing.Any]",
-                        Field(default=default_value, init=False),
-                    )
-                ],
-                bases=(NodeDataClass,),
-                init=False,
-            )
+        new_node_name = f"graph_input_{str(uuid())}"
+        input_dataclass = make_dataclass(
+            new_node_name,
+            [
+                (
+                    name,
+                    f"typing.Optional[{d_type}]",
+                    Field(default=default_value, init=False),
+                )
+            ],
+            bases=(NodeDataClass,),
+            init=False,
+        )
         i = input_dataclass()
-        setattr(i, '__node_name', new_node_name)
+        setattr(i, "__node_name", new_node_name)
         self.inputs[new_node_name] = i
         return NodeDataTracker(i)
+
+    def aggregator(self, name: str):
+        nda = NodeDataAggregator(name)
+        self.flow[nda.name] = nda
+        return nda
+
+
+    def _check_if_ready_to_run(self, cached_results, input_dict) -> typing.Optional[dict[str, tuple[str, str]]]:
+        step_kwds = dict()
+        for input_kwd, (input_node_id, input_node_kwd) in input_dict.items():
+            # print(f"{input_kwd} ++{input_node_id} ++{input_node_kwd}")
+            if input_node_id is not None and (
+                asdict(cached_results[input_node_id])[input_node_kwd]
+                is None
+            ):
+                return None
+            elif input_node_id is None:
+                if isinstance(input_node_kwd, NodeDataAggregator):
+                    # print("NodeDataAggregator")
+                    node_agg_data = self._check_if_ready_to_run(cached_results, input_node_kwd.inputs)
+                    if len(node_agg_data) > 0:
+                        step_kwds[input_kwd] = input_node_kwd(node_agg_data)
+                    else:
+                        return None
+                else:
+                    step_kwds[input_kwd] = input_node_kwd
+            else:
+                step_kwds[input_kwd] = asdict(
+                    cached_results[input_node_id]
+                )[input_node_kwd]
+        return step_kwds

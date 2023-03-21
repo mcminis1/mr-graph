@@ -17,4 +17,3 @@ async def test_fan_out():
     v = await g(n=1)
     assert v.q == 4
     assert v.p == 1
-
