@@ -180,7 +180,6 @@ class Graph:
                 step_kwds = self._check_if_ready_to_run(intermediate_results, step_graphio.inputs)
                 if step_kwds is not None and step_graphio.name not in completed_tasks:
                     ran_1 = True
-                    print(f"{step_graphio.name}: {step_kwds}")
                     if iscoroutinefunction(step_graphio.node.func):
                         running_coroutines[step_graphio.name] = asyncio.create_task(
                             step_graphio.node(**step_kwds)
@@ -284,10 +283,12 @@ class Graph:
         return nda
 
 
+
+
     def _check_if_ready_to_run(self, cached_results, input_dict) -> typing.Optional[dict[str, tuple[str, str]]]:
         step_kwds = dict()
         for input_kwd, (input_node_id, input_node_kwd) in input_dict.items():
-            # print(f"{input_kwd} ++{input_node_id} ++{input_node_kwd}")
+            print(f"{input_kwd} ++{input_node_id} ++{input_node_kwd}")
             if input_node_id is not None and (
                 asdict(cached_results[input_node_id])[input_node_kwd]
                 is None
@@ -295,12 +296,20 @@ class Graph:
                 return None
             elif input_node_id is None:
                 if isinstance(input_node_kwd, NodeDataAggregator):
-                    # print("NodeDataAggregator")
                     node_agg_data = self._check_if_ready_to_run(cached_results, input_node_kwd.inputs)
                     if len(node_agg_data) > 0:
                         step_kwds[input_kwd] = input_node_kwd(node_agg_data)
                     else:
                         return None
+                elif isinstance(input_node_kwd, NodeDataTracker):
+                    if len(input_node_kwd.fields) == 1:
+                        node_name = getattr(input_node_kwd, '__node_name')
+                        field = input_node_kwd.fields[0]
+                        v = asdict(input_node_kwd[node_name])[field]
+                        if v is not None:
+                            step_kwds[input_kwd] = v
+                        else:
+                            return None
                 else:
                     step_kwds[input_kwd] = input_node_kwd
             else:
