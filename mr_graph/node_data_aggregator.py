@@ -55,7 +55,10 @@ class NodeDataAggregator:
                 self.inputs[i_name] = value
             return self
         else:
-            raise Exception("Adding a not NodeDataClass to a NodeDataClass")
+            i_name = f"{self.result_name}_{len(self.inputs)}"
+            self.inputs[i_name] = (None, other)
+            return self
+
 
     def __call__(self, *args: typing.Any, **kwds: typing.Any) -> NodeDataClass:
         return list(kwds.values())
