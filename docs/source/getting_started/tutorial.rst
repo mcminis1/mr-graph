@@ -189,4 +189,20 @@ This will return a dataclass with two attributes: `p` and `q`.::
 
 When returning multiple values they are combined into a single dataclass object and returned. If there are conflicting names on the dataclasses then it will raise an error.
 
-When working with these outputs (NodeDataClass) you cna combine them using `+` and concatenate them into a list using `+=`
+Aggregating results
+-------------------
+
+Sometimes its useful to aggregate results from many different nodes into a list to pass to a function (fan-in architecture). There is a special class member that allows you to build those lists called an aggregator :: 
+
+    llm = Graph(nodes=[get_structured_answer, summarize_answers])
+
+    answers = llm.aggregator(name="answers")
+    for question in questions:
+        sa = llm.get_structured_answer(user_question=question)
+        answers += sa.answer
+    llm.outputs = llm.summarize_answers(answers=answers)
+
+    v = await llm(answers)
+    return v.summary
+
+In this example a list of answers is aggregated and used as an input to another function.

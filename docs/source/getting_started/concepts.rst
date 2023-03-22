@@ -20,3 +20,7 @@ The convention used throughout Mr. Graph is that you can use google docstrings t
 NodeDataClass
 -------------
 The dataclasses used as input and output from the functions in the graph.
+
+NodeDataAggregator
+------------------
+A class that allows you to aggregate results from nodes in the graph to fan-in to downstream nodes.

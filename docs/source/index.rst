@@ -23,9 +23,17 @@ Mr. Graph is a python library designed to make composing graphs of sync and asyn
    getting_started/tutorial
 
 
+Philosophy
+----------
+The purpose of Mr. Graph is to provide an efficient graph processing library for I/O bound functions. All blocking calls are ran in their own threads, and are executed concurrently with async functions. As these functions return their results, downstream functions are executed when their dependencies are done being computed.
+
+Return values are always wrapped in dataclasses whose names and types are specified using docstrings on the functions.
+
+This project might be useful for you if you have a graph of API calls to make which depend on each other.
+
 Features
 --------
-Mr. Graph is new and under active development. Current Features include.
+Mr. Graph is new and under active development. Current features include:
 
 * Use with either async or sync functions
 * Uses regular documentation formats to name return values.
