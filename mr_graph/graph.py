@@ -167,54 +167,51 @@ class Graph:
             # these are the outputs for the flow nodes
             intermediate_results[node_name] = node.output
 
-        ran_1 = True
+        processing_nodes = True
         completed_tasks = []
-        while ran_1:
+        running_coroutines = {}
+        while processing_nodes:
             # We iterate over all of the nodes and run any that are ready to be ran.
             # If we find that no more nodes can be executed, we quit.
             # todo: add WARNING if some nodes are not executed.
             # todo: add limits in case of loops
-            ran_1 = False
-            running_coroutines = {}
-            for step_name, step_graphio in self.flow.items():
-                step_kwds = self._check_if_ready_to_run(intermediate_results, step_graphio.inputs)
-                if step_kwds is not None and step_graphio.name not in completed_tasks:
-                    ran_1 = True
+            processing_nodes = False
+            for step_graphio in self.flow.values():
+                step_kwds = self._check_if_ready_to_run(
+                    intermediate_results, step_graphio.inputs
+                )
+                if (
+                    (step_kwds is not None)
+                    and (step_graphio.name not in completed_tasks)
+                    and (step_graphio.name not in running_coroutines)
+                ):
+                    processing_nodes = True
                     if iscoroutinefunction(step_graphio.node.func):
                         running_coroutines[step_graphio.name] = asyncio.create_task(
                             step_graphio.node(**step_kwds)
                         )
                     else:
-                        step_evaluation = step_graphio.node(**step_kwds)
-                        ks = list(asdict(intermediate_results[step_name]).keys())
-                        if len(ks) > 1:
-                            for i, k in enumerate(ks):
-                                setattr(
-                                    intermediate_results[step_graphio.name],
-                                    str(k),
-                                    step_evaluation[i],
-                                )
-                        else:
-                            setattr(
-                                intermediate_results[step_graphio.name],
-                                str(ks[0]),
-                                step_evaluation,
-                            )
-                        completed_tasks.append(step_name)
-            coros = list(running_coroutines.values())
-            if len(coros) > 0:
-                await asyncio.gather(*coros)
-                for step_name, step_evaluation in running_coroutines.items():
-                    step_value = step_evaluation.result()
-                    ks = list(asdict(intermediate_results[step_name]).keys())
+                        running_coroutines[step_graphio.name] = asyncio.create_task(
+                            asyncio.to_thread(step_graphio.node, **step_kwds)
+                        )
+                    await asyncio.sleep(0)
+            await asyncio.sleep(0)
+            for task_name, task in running_coroutines.items():
+                if task.done() and (task_name not in completed_tasks):
+                    step_value = task.result()
+                    ks = list(asdict(intermediate_results[task_name]).keys())
                     if len(ks) > 1:
                         for i, k in enumerate(ks):
                             setattr(
-                                intermediate_results[step_name], str(k), step_value[i]
+                                intermediate_results[task_name], str(k), step_value[i]
                             )
                     else:
-                        setattr(intermediate_results[step_name], str(ks[0]), step_value)
-                    completed_tasks.append(step_name)
+                        setattr(intermediate_results[task_name], str(ks[0]), step_value)
+                    completed_tasks.append(task_name)
+                    processing_nodes = True
+            if len(completed_tasks) < len(running_coroutines):
+                # still waiting for a return value
+                processing_nodes = True
 
         for node, field in self.outputs.field_map.items():
             setattr(
@@ -282,27 +279,27 @@ class Graph:
         self.flow[nda.name] = nda
         return nda
 
-
-
-
-    def _check_if_ready_to_run(self, cached_results, input_dict) -> typing.Optional[dict[str, tuple[str, str]]]:
+    def _check_if_ready_to_run(
+        self, cached_results, input_dict
+    ) -> typing.Optional[dict[str, tuple[str, str]]]:
         step_kwds = dict()
         for input_kwd, (input_node_id, input_node_kwd) in input_dict.items():
             if input_node_id is not None and (
-                asdict(cached_results[input_node_id])[input_node_kwd]
-                is None
+                asdict(cached_results[input_node_id])[input_node_kwd] is None
             ):
                 return None
             elif input_node_id is None:
                 if isinstance(input_node_kwd, NodeDataAggregator):
-                    node_agg_data = self._check_if_ready_to_run(cached_results, input_node_kwd.inputs)
+                    node_agg_data = self._check_if_ready_to_run(
+                        cached_results, input_node_kwd.inputs
+                    )
                     if len(node_agg_data) > 0:
                         step_kwds[input_kwd] = input_node_kwd(node_agg_data)
                     else:
                         return None
                 elif isinstance(input_node_kwd, NodeDataTracker):
                     if len(input_node_kwd.fields) == 1:
-                        node_name = getattr(input_node_kwd, '__node_name')
+                        node_name = getattr(input_node_kwd, "__node_name")
                         field = input_node_kwd.fields[0]
                         v = asdict(input_node_kwd[node_name])[field]
                         if v is not None:
@@ -312,7 +309,7 @@ class Graph:
                 else:
                     step_kwds[input_kwd] = input_node_kwd
             else:
-                step_kwds[input_kwd] = asdict(
-                    cached_results[input_node_id]
-                )[input_node_kwd]
+                step_kwds[input_kwd] = asdict(cached_results[input_node_id])[
+                    input_node_kwd
+                ]
         return step_kwds

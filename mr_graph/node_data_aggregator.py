@@ -24,7 +24,9 @@ class NodeDataAggregator:
                 Field(default=None, init=False),
             )
         ]
-        self.outputs = make_dataclass(f"{self.name}_outputs", outputs, bases=(NodeDataClass,), init=False)
+        self.outputs = make_dataclass(
+            f"{self.name}_outputs", outputs, bases=(NodeDataClass,), init=False
+        )
         self.output = self.outputs()
         self.node = SyncNode(
             name=self.name,
@@ -32,7 +34,7 @@ class NodeDataAggregator:
             func=self.__call__,
             outputs=self.output,
         )
-    
+
     def __iadd__(self, other) -> "NodeDataAggregator":
         """adding to NodeDataAggregator.
 
@@ -59,14 +61,11 @@ class NodeDataAggregator:
             self.inputs[i_name] = (None, other)
             return self
 
-
     def __call__(self, *args: typing.Any, **kwds: typing.Any) -> NodeDataClass:
         return list(kwds.values())
 
     def __repr__(self) -> str:
-        return (
-            f"({self.node_name}, 'inputs': {self.inputs}, 'outputs': {self.outputs})"
-        )
+        return f"({self.node_name}, 'inputs': {self.inputs}, 'outputs': {self.outputs})"
 
     def __hash__(self) -> int:
         return self.func.__hash__()

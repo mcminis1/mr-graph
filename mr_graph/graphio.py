@@ -5,6 +5,7 @@ import logging
 from mr_graph.node_data_tracker import NodeDataTracker
 from mr_graph.node_data_aggregator import NodeDataAggregator
 
+
 class GraphIO:
     """Input and output tracker for a node in the graph.
 
@@ -52,7 +53,10 @@ class GraphIO:
                 if isinstance(dc, NodeDataTracker):
                     self.inputs[kwd] = (getattr(dc, "__node_name"), kwd)
                 elif isinstance(dc, NodeDataAggregator):
-                    self.inputs[kwd] = (getattr(dc, "__node_name"), getattr(dc, "result_name"))
+                    self.inputs[kwd] = (
+                        getattr(dc, "__node_name"),
+                        getattr(dc, "result_name"),
+                    )
                 elif isinstance(dc, tuple) and dc[0] == "mr_graph_node":
                     (_, key, val) = dc
                     self.inputs[node_input_fields[indx]] = (key, val)
